@@ -461,12 +461,14 @@ export class TimeSeriesDataEngine<T extends SingleTypedTreeData<SingleData<numbe
         }
     }
 
-    public rawDataNodeListReadCache: string[] = [];
+    public rawDataNodeListReadCache: string[] = new Array(100).fill("");
     public rawDataReadNextIdList: number[] = [];
     public rawDataReadEnd = false;
 
     /**
      * 获取segment的原始数据，用于外部解析数据。第一次执行应传入start为true。需要每个tick连续调用，直到返回数据为止。
+     *
+     * 返回的是类似segment的数组。数据被存储在对应的位置上，以便于外部解析。
      */
     public readRawData(start: boolean): string[] | false | null {
         if (this.timeData.getWritingIdTick !== -1) {
@@ -478,7 +480,7 @@ export class TimeSeriesDataEngine<T extends SingleTypedTreeData<SingleData<numbe
             this.opts.segmentManager
         );
         if (start) {
-            this.rawDataNodeListReadCache = [];
+            this.rawDataNodeListReadCache = new Array(100).fill("");
             this.rawDataReadNextIdList = this.getNextSegmentIdList(
                 this.timeData.activeId,
                 this.opts.readDataBatchSize,
@@ -496,7 +498,7 @@ export class TimeSeriesDataEngine<T extends SingleTypedTreeData<SingleData<numbe
                 if (rawSeriesDataHere === null || isEmpty(rawSeriesDataHere)) {
                     return;
                 }
-                this.rawDataNodeListReadCache.push(rawSeriesDataHere);
+                this.rawDataNodeListReadCache[dataId] = rawSeriesDataHere;
             });
         }
 
