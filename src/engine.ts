@@ -216,6 +216,7 @@ export class TimeSeriesDataEngine<T extends SingleTypedTreeData<SingleData<numbe
                             return oldNumber;
                         })
                     );
+                    seriesDataNodeList[key].depth = newDepth;
                 }
 
                 // console.log(key);

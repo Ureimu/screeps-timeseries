@@ -1,6 +1,6 @@
 {
     "name": "screeps-timeseries",
-    "version": "0.0.3",
+    "version": "0.0.4",
     "description": "screeps-timeseries",
     "main": "dist/index.js",
     "typings": "./dist/src/index.d.ts",
