@@ -196,6 +196,28 @@ export class TimeSeriesDataEngine<T extends SingleTypedTreeData<SingleData<numbe
                 if (seriesDataNodeList[key] && value?.exp !== seriesDataNodeList[key]?.exp) {
                     seriesDataNodeList[key].exp = value?.exp;
                 }
+
+                if (seriesDataNodeList[key] && value.depth !== seriesDataNodeList[key].depth) {
+                    // 深度改变了。需要对本segment内的该条数据做处理保证兼容。
+                    const newDepth = value.depth;
+                    const oldDepth = seriesDataNodeList[key].depth;
+                    const oldCodec = new UTF15({ depth: oldDepth, array: true, meta: true });
+                    const oldNumberList = oldCodec.decode(seriesDataNodeList[key].data);
+                    const oldNullValue = POWERS_OF_2[oldDepth] - 1;
+                    const newCodec = new UTF15({ depth: newDepth, array: true, meta: true });
+                    seriesDataNodeList[key].data = newCodec.encode(
+                        oldNumberList.map(oldNumber => {
+                            if (oldNumber === oldNullValue) {
+                                return nullValue;
+                            }
+                            if (oldNumber > nullValue) {
+                                return nullValue - 1;
+                            }
+                            return oldNumber;
+                        })
+                    );
+                }
+
                 // console.log(key);
                 let valueToStore = value.data;
                 if (isNull(value.data) || isNaN(value.data) || isUndefined(value.data)) {
