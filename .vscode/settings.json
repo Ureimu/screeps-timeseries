@@ -83,4 +83,5 @@
         "test/setup-mocha.js"
     ],
     "search.useIgnoreFiles": false,
+    "js/ts.tsdk.path": "./node_modules/typescript/lib",
 }

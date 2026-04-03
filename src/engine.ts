@@ -441,7 +441,7 @@ export class TimeSeriesDataEngine<T extends SingleTypedTreeData<SingleData<numbe
                     if (!this.seriesDataNodeListReadCache[key]) {
                         this.seriesDataNodeListReadCache[key] = {
                             ...value,
-                            data: [] as (number | null)[]
+                            data: [...new Array(this.storeNumReadCache).fill(null)] as (number | null)[]
                         } as SingleData<(number | null)[]>;
                     }
                     if (this.seriesDataNodeListReadCache[key].mutations) {
@@ -455,7 +455,7 @@ export class TimeSeriesDataEngine<T extends SingleTypedTreeData<SingleData<numbe
                 });
                 this.storeNumReadCache += seriesDataHere.storeNum;
                 Object.entries(this.seriesDataNodeListReadCache).forEach(([key, value]) => {
-                    // 将不存在的数据补全为null
+                    // 将该份cache不存在的数据补全为null
                     const { data } = value;
                     // console.log(`${dataId}, ${key}:${data.length}, ${data}`);
                     if (data.length < this.storeNumReadCache) {
