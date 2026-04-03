@@ -441,7 +441,7 @@ export class TimeSeriesDataEngine<T extends SingleTypedTreeData<SingleData<numbe
                     if (!this.seriesDataNodeListReadCache[key]) {
                         this.seriesDataNodeListReadCache[key] = {
                             ...value,
-                            data: [...new Array(this.storeNumReadCache).fill(null)] as (number | null)[]
+                            data: new Array(this.storeNumReadCache).fill(null) as (number | null)[]
                         } as SingleData<(number | null)[]>;
                     }
                     if (this.seriesDataNodeListReadCache[key].mutations) {
