@@ -106,4 +106,91 @@ describe("engine should run", () => {
         // Total storeNum = 1+1+1=3, so fill with null: [null,42,42]
         assert.deepEqual(testKeyData, [null, 42, 42], "Should have null for missing key in segment 1");
     });
+
+    it("should decode signed data correctly (positive, negative, and null)", () => {
+        let timeCounter = 5;
+        const segmentManager = new TimeSeriesSegmentManager(
+            new Array(100).fill(""),
+            (ids: number[]) => null,
+            () => timeCounter
+        );
+
+        let timeData = {
+            lastRecordTime: 0,
+            interval: 15 * 60 * 1000,
+            idList: [0],
+            activeId: 0,
+            storeStartTick: 0,
+            switchWritingIdTick: 0,
+            getWritingIdTick: -1
+        };
+
+        const timeDataFunc = () => timeData;
+
+        const dataGetter = (store: boolean): SingleTypedTreeData<SingleData<number>> => ({
+            timeStamp: { data: Date.now(), type: "time", depth: 41 },
+            gameTime: { data: timeCounter, type: "time", depth: 41 }
+        });
+
+        const engine = new TimeSeriesDataEngine(dataGetter, {
+            segmentManager,
+            timeData: timeDataFunc,
+            timeGetter: () => timeCounter,
+            idList: [0],
+            readDataBatchSize: 1
+        });
+
+        const codec = new UTF15({ depth: 8, array: true, meta: true });
+        const codecTime = new UTF15({ depth: 41, array: true, meta: true });
+
+        // depth=8: nullValue=255, signedOffset=128, signedMax=126, signedMin=-128
+        // Encode signed values with offset:
+        //   null → 255
+        //   -5  → -5 + 128 = 123
+        //   42  → 42 + 128 = 170
+        const segment0Data = {
+            series: {
+                signedKey: {
+                    data: codec.encode([255, 123, 170]),
+                    type: "number",
+                    depth: 8,
+                    signed: true
+                },
+                unsignedKey: {
+                    data: codec.encode([42, 100, 255]),
+                    type: "number",
+                    depth: 8
+                },
+                timeStamp: { data: codecTime.encode([Date.now(), Date.now(), Date.now()]), type: "time", depth: 41 },
+                gameTime: { data: codecTime.encode([0, 1, 2]), type: "time", depth: 41 }
+            },
+            storeNum: 3,
+            isWriting: false
+        };
+        segmentManager.segmentCache[0] = JSON.stringify(segment0Data);
+
+        // Start reading
+        timeCounter++;
+        let result = engine.readData(true);
+        assert.isFalse(result);
+
+        while (true) {
+            timeCounter++;
+            result = engine.readData(false);
+            if (result !== false) break;
+        }
+
+        assert.isObject(result);
+        const signedData = (result as any).signedKey.data;
+        const unsignedData = (result as any).unsignedKey.data;
+
+        // signedKey should decode to [null, -5, 42]
+        assert.deepEqual(
+            signedData,
+            [null, -5, 42],
+            "Signed key should decode: null→null, negative preserved, positive preserved"
+        );
+        // unsignedKey should decode to [42, 100, null]
+        assert.deepEqual(unsignedData, [42, 100, null], "Unsigned key should remain unchanged, null sentinel works");
+    });
 });

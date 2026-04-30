@@ -13,6 +13,10 @@ export interface SingleData<T extends (number | null)[] | string | number> {
      * 指示该数据在使用时需要乘以10的多少次方。
      */
     exp?: number;
+    /**
+     * 指示该数据是否带符号（正负）。
+     */
+    signed?: boolean;
     mutations?: T extends number[] | string ? [mutationIndex: number, size: number][] : undefined;
 }
 

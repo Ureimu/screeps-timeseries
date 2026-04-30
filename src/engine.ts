@@ -192,9 +192,12 @@ export class TimeSeriesDataEngine<T extends SingleTypedTreeData<SingleData<numbe
 
             Object.entries(nodeList).forEach(([key, value]) => {
                 const nullValue = POWERS_OF_2[value.depth] - 1;
-                // 更新exp数据
+                // 更新exp数据和signed数据
                 if (seriesDataNodeList[key] && value?.exp !== seriesDataNodeList[key]?.exp) {
                     seriesDataNodeList[key].exp = value?.exp;
+                }
+                if (seriesDataNodeList[key] && value?.signed !== seriesDataNodeList[key]?.signed) {
+                    seriesDataNodeList[key].signed = value?.signed;
                 }
 
                 if (seriesDataNodeList[key] && value.depth !== seriesDataNodeList[key].depth) {
@@ -223,12 +226,23 @@ export class TimeSeriesDataEngine<T extends SingleTypedTreeData<SingleData<numbe
                 let valueToStore = value.data;
                 if (isNull(value.data) || isNaN(value.data) || isUndefined(value.data)) {
                     valueToStore = nullValue;
-                }
-                if (value.data >= nullValue) {
-                    valueToStore = nullValue - 1;
-                }
-                if (value.data < 0) {
-                    valueToStore = 0;
+                } else if (value.signed) {
+                    const signedOffset = POWERS_OF_2[value.depth - 1];
+                    const signedMax = signedOffset - 2;
+                    if (value.data > signedMax) {
+                        valueToStore = nullValue - 1;
+                    } else if (value.data < -signedOffset) {
+                        valueToStore = 0;
+                    } else {
+                        valueToStore = value.data + signedOffset;
+                    }
+                } else {
+                    if (value.data >= nullValue) {
+                        valueToStore = nullValue - 1;
+                    }
+                    if (value.data < 0) {
+                        valueToStore = 0;
+                    }
                 }
                 if (seriesDataNodeList[key]) {
                     const { depth, data } = seriesDataNodeList[key];
@@ -269,8 +283,8 @@ export class TimeSeriesDataEngine<T extends SingleTypedTreeData<SingleData<numbe
 
                     seriesDataNodeList[key].data = codec.encode(numberList);
                 } else {
-                    const { depth, type, exp } = value;
-                    seriesDataNodeList[key] = { depth, data: "", type, exp };
+                    const { depth, type, exp, signed } = value;
+                    seriesDataNodeList[key] = { depth, data: "", type, exp, signed };
                     const newSeriesDataNode = seriesDataNodeList[key];
                     const codec = new UTF15({ depth, array: true, meta: true });
                     if (storeNum !== 0) {
@@ -406,8 +420,15 @@ export class TimeSeriesDataEngine<T extends SingleTypedTreeData<SingleData<numbe
                     // console.log(key);
                     const { depth } = value;
                     const codec = new UTF15({ depth, array: true, meta: true });
-                    let data: (number | null)[] = codec.decode(value.data);
-                    data = data.map(i => (i === POWERS_OF_2[depth] - 1 ? null : i));
+                    const decoded: number[] = codec.decode(value.data);
+                    const nullValue = POWERS_OF_2[depth] - 1;
+                    let data: (number | null)[];
+                    if (value.signed) {
+                        const signedOffset = POWERS_OF_2[depth - 1];
+                        data = decoded.map(i => (i === nullValue ? null : i - signedOffset));
+                    } else {
+                        data = decoded.map(i => (i === nullValue ? null : i));
+                    }
                     // read mutations and insert extra data
                     const mutations = value.mutations;
 
